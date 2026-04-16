@@ -270,16 +270,9 @@ class UIDashboard(tk.Tk):
         self.analytics = DataAnalytics(self.pipeline.merged_df)
 
         self._build_layout()
-        self._show_summaries()
         self.plot_selected("3a")
 
     def _build_layout(self):
-        top_frame = ttk.Frame(self)
-        top_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
-
-        self.summary_text = tk.Text(top_frame, height=12, wrap=tk.WORD)
-        self.summary_text.pack(fill=tk.X)
-
         control_frame = ttk.Frame(self)
         control_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
@@ -310,34 +303,6 @@ class UIDashboard(tk.Tk):
         self.ax = self.fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.fig, master=chart_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
-    def _show_summaries(self):
-        csum = self.pipeline.cleaning_summary()
-        msum = self.pipeline.merging_summary()
-
-        lines = []
-        lines.append("=== DATA CLEANING SUMMARY ===")
-        for k, v in csum.items():
-            lines.append(f"{k}: {v}")
-
-        lines.append("")
-        lines.append("=== DATA MERGING SUMMARY ===")
-        lines.append(f"Total transactions: {msum['Total transactions']}")
-        lines.append(f"Number of debit transactions: {msum['Number of debit transactions']}")
-        lines.append(f"Number of credit transactions: {msum['Number of credit transactions']}")
-        lines.append("Fraud status breakdown:")
-        lines.append(f"  Fraudulent: {msum['Number of fraudulent transactions']}")
-        lines.append(f"  Legitimate: {msum['Number of legitimate transactions']}")
-        lines.append(f"  Unknown: {msum['Number of unknown transactions']}")
-        lines.append("Business type summary:")
-        lines.append(f"  In transactions: {msum['Number of business types in transactions']}")
-        lines.append(f"  In fraudulent transactions: {msum['Number of business types involved in fraudulent transactions']}")
-        lines.append(f"  In legitimate transactions: {msum['Number of business types involved in legitimate transactions']}")
-        lines.append(f"  In unknown transactions: {msum['Number of business types involved in unknown transactions']}")
-
-        self.summary_text.delete("1.0", tk.END)
-        self.summary_text.insert(tk.END, "\n".join(lines))
-        self.summary_text.configure(state=tk.DISABLED)
 
     def _annotate_bars(self, bars, labels):
         for bar, label in zip(bars, labels):
@@ -432,6 +397,100 @@ class UIDashboard(tk.Tk):
         self.canvas.draw()
 
 
+def print_section_summaries(pipeline):
+    cleaning = pipeline.cleaning_summary()
+    merging = pipeline.merging_summary()
+
+    print("\n=== SECTION 1: DATA CLEANING SUMMARY ===")
+    print(f"Total transactions before data cleaning = {cleaning['Total transactions before data cleaning']}")
+    print(f"Total transactions after data cleaning = {cleaning['Total transactions after data cleaning']}")
+
+    print("\n=== SECTION 2: DATA MERGING SUMMARY ===")
+    print("Transactions summary after data merging:")
+    print("-" * 50)
+    print(f"Total transactions = {merging['Total transactions']}")
+    print(f"Number of debit transactions = {merging['Number of debit transactions']}")
+    print(f"Number of credit transactions = {merging['Number of credit transactions']}")
+    print("Fraud status breakdown:")
+    print(f"Number of fraudulent transactions = {merging['Number of fraudulent transactions']}")
+    print(f"Number of legitimate transactions = {merging['Number of legitimate transactions']}")
+    print(f"Number of unknown transactions = {merging['Number of unknown transactions']}")
+    print("Business type summary:")
+    print(f"Number of business types in transactions = {merging['Number of business types in transactions']}")
+    print(f"Number of business types involved in fraudulent transactions: {merging['Number of business types involved in fraudulent transactions']}")
+    print(f"Number of business types involved in legitimate transactions: {merging['Number of business types involved in legitimate transactions']}")
+    print(f"Number of business types involved in unknown transactions: {merging['Number of business types involved in unknown transactions']}")
+
+
+def _format_table_value(value):
+    if pd.isna(value):
+        return ""
+    if isinstance(value, bool):
+        return str(value)
+    if isinstance(value, (int, float)):
+        return f"{value:.2f}"
+    return str(value)
+
+
+def print_ascii_table(title, dataframe):
+    print(f"\n{title}")
+    if dataframe.empty:
+        print("+-------------------------+")
+        print("| No rows to display.     |")
+        print("+-------------------------+")
+        return
+
+    headers = [str(col) for col in dataframe.columns]
+    rows = [[_format_table_value(val) for val in row] for row in dataframe.to_numpy()]
+    widths = []
+    for idx, header in enumerate(headers):
+        max_row_width = max(len(row[idx]) for row in rows) if rows else 0
+        widths.append(max(len(header), max_row_width))
+
+    separator = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
+    header_line = "| " + " | ".join(headers[i].ljust(widths[i]) for i in range(len(headers))) + " |"
+
+    print(separator)
+    print(header_line)
+    print(separator)
+    for row in rows:
+        row_line = "| " + " | ".join(row[i].ljust(widths[i]) for i in range(len(row))) + " |"
+        print(row_line)
+    print(separator)
+
+
+def print_section3_tables(analytics):
+    print("\n=== SECTION 3: DATA ANALYSIS TABLES ===")
+
+    table_3a = analytics.avg_transaction_amount_per_date().copy()
+    table_3a["date"] = table_3a["date"].astype(str)
+    print_ascii_table("3a) Average Transaction Amount ($) per Date", table_3a)
+
+    table_3b = analytics.fraud_rate_by_hour().copy()
+    print_ascii_table("3b) Fraud Rate (%) by Hour of Day", table_3b)
+
+    table_3c = analytics.fraud_status_distribution()[["label", "count", "percentage"]].copy()
+    table_3c = table_3c.rename(columns={"label": "Fraud_Status"})
+    print_ascii_table("3c) Overall Fraud Status Distribution", table_3c)
+
+    counts, pct = analytics.debit_credit_by_fraud_status()
+    table_3d = pd.DataFrame({
+        "Fraud_Status": counts.index.astype(str),
+        "Debit_Count": counts.get("Debit", pd.Series(0, index=counts.index)).astype(int).values,
+        "Debit_Percentage": pct.get("Debit", pd.Series(0.0, index=pct.index)).values,
+        "Credit_Count": counts.get("Credit", pd.Series(0, index=counts.index)).astype(int).values,
+        "Credit_Percentage": pct.get("Credit", pd.Series(0.0, index=pct.index)).values,
+    })
+    print_ascii_table("3d) Debit vs Credit Transactions by Fraud Status", table_3d)
+
+    table_3e = analytics.top5_business_types_by_fraud_amount().copy()
+    print("\n3e) Top 5 Business Types by Fraudulent Transaction Amount ($)")
+    if table_3e.empty:
+        print_ascii_table("Top 5 Fraudulent Business Types", pd.DataFrame())
+    else:
+        print_ascii_table("Top 5 Fraudulent Business Types", table_3e)
+
+
 def main():
     
     pipeline = TransactionPipeline(
@@ -440,6 +499,11 @@ def main():
         fraud_path="fraud.csv"
     )
     pipeline.run()
+
+    print_section_summaries(pipeline)
+
+    analytics = DataAnalytics(pipeline.merged_df)
+    print_section3_tables(analytics)
 
     app = UIDashboard(pipeline)
     app.mainloop()
