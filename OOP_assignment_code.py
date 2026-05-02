@@ -1,3 +1,12 @@
+'''
+UEEN1043 Object-Oriented Concepts and Programming Techniques Assignment 2026
+Group 2 (P1)
+Members:
+Joel Lim Yi Hong (2102392)
+Pang Shi Sheng (2103107)
+
+'''
+
 import tkinter as tk
 from tkinter import ttk
 import math
@@ -101,14 +110,6 @@ class TransactionPipeline:
         for col in ["Category", "Business_Type", "Fraud_Status"]:
             merged_df[col] = merged_df[col].fillna("Unknown").astype("string").str.strip() # Fill missing values with "Unknown"
             merged_df[col] = merged_df[col].replace("", "Unknown") # Replace empty strings with "Unknown"
-
-        # merged_df["Fraud_Status"] = merged_df["Fraud_Status"].str.title() # Convert values under Fraud_Status column to title case (e.g. "yes" to "Yes")
-        # merged_df["Fraud_Status"] = merged_df["Fraud_Status"].where(
-        #     merged_df["Fraud_Status"].isin(["Yes", "No"]),
-        #     "Unknown"
-        # )
-
-        # merged_df["date"] = pd.to_datetime(merged_df["date"], errors="coerce")
         
         self.merged_df = merged_df
 
@@ -234,14 +235,6 @@ class DataAnalytics:
 		# Create pivot table where "Fraud_Status" is the index, "payment_type" is the columns and "count" is the values and fill the missing values with 0
         pivot_counts = summary.pivot(index="Fraud_Status", columns="payment_type", values="count").fillna(0)
         
-        # pivot_counts = pivot_counts.reindex(status_order).fillna(0)
-
-        # for col in payment_order:
-        #     if col not in pivot_counts.columns:
-        #         pivot_counts[col] = 0
-
-        # pivot_counts = pivot_counts[payment_order] # Reorder the columns
-        
 		# Calculate the percentage for each payment type within each fraud status category
         pivot_pct = pivot_counts.div(pivot_counts.sum(axis=1), axis=0) * 100
 
@@ -262,7 +255,7 @@ class DataAnalytics:
         
         return out
 
-
+# Class to create the analytics dashboard UI using Tkinter and Matplotlib
 class AnalyticsDashboardUI:
     def __init__(self, analytics):
         self.analytics = analytics
@@ -554,7 +547,7 @@ class AnalyticsDashboardUI:
         self.root.quit()
         self.root.destroy()
 
-
+# Class to print the data summaries and tables in the terminal
 class ReportPrinter:
     def __init__(self, pipeline, analytics):
         self.pipeline = pipeline
