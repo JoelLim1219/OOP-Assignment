@@ -2,8 +2,8 @@
 UEEN1043 Object-Oriented Concepts and Programming Techniques Assignment 2026
 Group 2 (P1)
 Members:
-Joel Lim Yi Hong (2102392)
-Pang Shi Sheng (2103107)
+Joel Lim Yi Hong MH (2102392)
+Pang Shi Sheng MH (2103107)
 https://github.com/JoelLim1219/OOP-Assignment
 '''
 
@@ -325,11 +325,13 @@ class AnalyticsDashboardUI:
         self.ax_3a.set_title("3a) Average Transaction Amount ($) per Date", fontsize=self.title_size)
         self.ax_3a.set_xlabel("Date", fontsize=self.axis_title_size)
         self.ax_3a.set_ylabel("Average Amount ($)", fontsize=self.axis_title_size)
-        tick_step = max(1, len(x_positions) // 12)
-        tick_positions = x_positions[::tick_step]
-        tick_labels = data_3a["date"].astype(str).iloc[::tick_step]
-        self.ax_3a.set_xticks(tick_positions)
-        self.ax_3a.set_xticklabels(tick_labels, rotation=45, ha="right", fontsize=self.tick_size)
+        self.ax_3a.set_xticks(x_positions)
+        self.ax_3a.set_xticklabels(
+            data_3a["date"].astype(str),
+            rotation=45,
+            ha="right",
+            fontsize=self.tick_size,
+        )
         self.ax_3a.tick_params(axis="y", labelsize=self.tick_size)
         if x_positions:
             self.ax_3a.set_xlim(x_positions[0] - 0.5, x_positions[-1] + 0.5)
@@ -648,7 +650,7 @@ class ReportPrinter:
         else:
             self.print_ascii_table("Top 5 Fraudulent Business Types", table_3e)
 
-
+# Main function to run the entire pipeline, print reports and launch the analytics dashboard UI
 def main():
     
     pipeline = TransactionPipeline(
